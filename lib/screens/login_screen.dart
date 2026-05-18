@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart'; // Sign up page par jaane ke liye
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,6 +27,10 @@ class _LoginScreenState extends State<LoginScreen> {
       // TODO: Firebase core integration Member 2 karega baad mein
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Processing Login...')),
+      );
+      // SnackBar ke niche yeh line paste kar dein dono screens mein:
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }

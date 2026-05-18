@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/custom_text_field.dart';
+import 'home_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -27,6 +28,10 @@ class _SignupScreenState extends State<SignupScreen> {
       // TODO: Firebase Registration Core Logic (Member 2 will implement this)
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Creating Account...')),
+      );
+      // SnackBar ke niche yeh line paste kar dein dono screens mein:
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }

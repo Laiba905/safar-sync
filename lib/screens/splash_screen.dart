@@ -34,15 +34,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _controller.forward();
 
     Timer(const Duration(milliseconds: 3500), () {
-      // Navigator.of(context).pushReplacement(
-      //   PageRouteBuilder(
-      //     transitionDuration: const Duration(milliseconds: 800),
-      //     pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
-      //     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      //       return FadeTransition(opacity: animation, child: child);
-      //     },
-      //   ),
-      // );
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 800),
+          pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
     });
   }
 

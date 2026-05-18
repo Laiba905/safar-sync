@@ -69,7 +69,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             width: 80,
                             padding: const EdgeInsets.all(5),
                             child: Image.asset(
-                              'assets/images/logo.png',
+                              'assets/images/logo1.png',
                               fit: BoxFit.contain,
                             ),
                           ),

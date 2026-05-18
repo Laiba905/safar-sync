@@ -157,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        Redirect to Signup
+                        //Redirect to Signup
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

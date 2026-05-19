@@ -18,15 +18,17 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      // Hardcoded colors ki jagah theme settings use ki hain taake system ke mutabik badal sakein
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Travel Network',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+          style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
         actions: [
           IconButton(
@@ -42,11 +44,13 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
           children: [
             // 🔍 Search Bar for finding new buddies
             TextField(
+              style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'Search for travel buddies...',
-                prefixIcon: const Icon(Icons.search_rounded),
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.onSurface.withOpacity(0.6)),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: theme.cardColor, // Dark mode mein automatic dark container ho jayega
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15),
                   borderSide: BorderSide.none,
@@ -57,19 +61,19 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
             const SizedBox(height: 24),
 
             // 📩 Sync Requests Section (Incoming)
-            const Text(
+            Text(
               'Sync Requests (2)',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
-            _buildRequestTile('Zainab Sheikh', 'Mutual Friend: Ahmed'),
+            _buildRequestTile(context, 'Zainab Sheikh', 'Mutual Friend: Ahmed'),
 
             const SizedBox(height: 24),
 
             // 👥 My Network (Active Buddies)
-            const Text(
+            Text(
               'My Travel Squad',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
             ),
             const SizedBox(height: 12),
             ListView.builder(
@@ -78,7 +82,7 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
               itemCount: _myBuddies.length,
               itemBuilder: (context, index) {
                 final buddy = _myBuddies[index];
-                return _buildBuddyTile(buddy);
+                return _buildBuddyTile(context, buddy);
               },
             ),
           ],
@@ -87,24 +91,39 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
     );
   }
 
-  // Request Tile Widget
-  Widget _buildRequestTile(String name, String subtitle) {
+  // Request Tile Widget - Theme optimized
+  Widget _buildRequestTile(BuildContext context, String name, String subtitle) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFE0F2F1), // Light Teal background
+        // Dark mode mein subtle dark color aur light mode mein light teal background
+        color: isDark ? theme.cardColor : const Color(0xFFE0F2F1),
         borderRadius: BorderRadius.circular(16),
+        border: isDark ? Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)) : null,
       ),
       child: Row(
         children: [
-          const CircleAvatar(radius: 20, backgroundColor: Colors.grey),
+          const CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.grey,
+            backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150'),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                    name,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)
+                ),
+                Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))
+                ),
               ],
             ),
           ),
@@ -114,31 +133,47 @@ class _BuddiesScreenState extends State<BuddiesScreen> {
               backgroundColor: const Color(0xFF0D9488),
               minimumSize: const Size(60, 32),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
             ),
-            child: const Text('Accept', style: TextStyle(fontSize: 12, color: Colors.white)),
+            child: const Text('Accept', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  // Active Buddy Tile Widget
-  Widget _buildBuddyTile(Map<String, String> buddy) {
+  // Active Buddy Tile Widget - Theme optimized
+  Widget _buildBuddyTile(BuildContext context, Map<String, String> buddy) {
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.08)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+              color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.2 : 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4)
+          ),
         ],
       ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
+          radius: 22,
           backgroundImage: NetworkImage(buddy['image']!),
         ),
-        title: Text(buddy['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(buddy['status']!, style: const TextStyle(fontSize: 12)),
+        title: Text(
+            buddy['name']!,
+            style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)
+        ),
+        subtitle: Text(
+            buddy['status']!,
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6))
+        ),
         trailing: IconButton(
           icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Color(0xFF0D9488)),
           onPressed: () {},

@@ -25,11 +25,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void _handleSignup() {
     if (_formKey.currentState!.validate()) {
-      // TODO: Firebase Registration Core Logic (Member 2 will implement this)
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Creating Account...')),
       );
-      // SnackBar ke niche yeh line paste kar dein dono screens mein:
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
@@ -39,11 +37,14 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -67,7 +68,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // App Mini Logo
+                        // App Mini Logo - Dark mode adaptive
                         Center(
                           child: Container(
                             height: 80,
@@ -76,6 +77,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             child: Image.asset(
                               'assets/images/logo1.png',
                               fit: BoxFit.contain,
+                              color: isDark ? Colors.white : null,
                             ),
                           ),
                         ),
@@ -95,7 +97,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: theme.colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -170,17 +172,16 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // Redirect back to Login Screen
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               "Already have an account? ",
-                              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
                             ),
                             GestureDetector(
                               onTap: () {
-                                Navigator.of(context).pop(); // Back to Login Screen
+                                Navigator.of(context).pop();
                               },
                               child: Text(
                                 'Sign In',

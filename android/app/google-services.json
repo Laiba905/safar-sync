@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "456187198402",
+    "project_id": "safar-sync",
+    "storage_bucket": "safar-sync.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:456187198402:android:655a05fdfe903c8f7d345b",
+        "android_client_info": {
+          "package_name": "com.example.safar_sync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6wXBd_0LYj19kyPbD8KQ8Fb3cTKWwZoE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

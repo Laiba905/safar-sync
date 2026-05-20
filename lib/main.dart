@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'theme/app_theme.dart';
-import 'firebase_options.dart';
-import 'screens/splash_screen.dart';
+import 'package:safar_sync/screens/splash_screen.dart';
+import 'screens/home_screen.dart';
 
-Future<void> main() async {
-  // Ensure Flutter bindings are initialized before app launch
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark); // Default Dark set kiya h jaisa screenshots me h
+final ValueNotifier<String> profileImageNotifier = ValueNotifier('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200');
+final ValueNotifier<String> profileNameNotifier = ValueNotifier('Ayesha Khan');
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Firebase ko app start hotay hi initialize karein taake baad mein crash na ho
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
   runApp(const MyApp());
 }
 
@@ -22,67 +16,30 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SafarSync',
-      debugShowCheckedModeBanner: false,
-
-      // ☀️ Light Mode Theme Configuration
-      theme: AppTheme.lightTheme,
-
-      // 🌙 Dark Mode Theme Configuration
-      darkTheme: AppTheme.darkTheme,
-
-      // 🔄 System settings ke mutabik automatic light/dark switch hoga
-      themeMode: ThemeMode.system,
-
-      // 🚀 App starting point set to Animated Splash Screen
-      home: const SplashScreen(),
-    );
-  }
-}
-
-// Note: Mahnoor ka banaya hua InitializerWidget abhi neechay moujud hai,
-// jab aap Splash Screen se direct user auth status check karengi, tab yeh use hoga.
-class InitializerWidget extends StatelessWidget {
-  const InitializerWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          // Firebase Firestore test message log
-          FirebaseFirestore.instance.collection('test_collection').add({
-            'message': 'Hello Mahnoor, Firebase is working!',
-            'time': DateTime.now().toString(),
-          });
-
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Safar Sync'),
-              backgroundColor: Colors.blue,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (_, ThemeMode currentMode, __) {
+        return MaterialApp(
+          title: 'SafarSync',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData.light().copyWith(
+            scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+            cardColor: Colors.white,
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF0D9488),
+              onSurface: Colors.black87,
             ),
-            body: const Center(
-              child: Text('Firebase Initialized and Data Sent!'),
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(
-              child: Text('Error: ${snapshot.error}'),
-            ),
-          );
-        }
-
-        return const Scaffold(
-          body: Center(
-            child: CircularProgressIndicator(),
           ),
+          darkTheme: ThemeData.dark().copyWith(
+            scaffoldBackgroundColor: const Color(0xFF0F172A),
+            cardColor: const Color(0xFF1E293B),
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF0D9488),
+              onSurface: Colors.white,
+            ),
+          ),
+          themeMode: currentMode,
+          home: const SplashScreen(),
         );
       },
     );

@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 import 'create_trip_screen.dart';
 import 'trip_details_screen.dart';
 import 'profile_screen.dart';
+import '../providers/trip_provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/network_provider.dart';
+import '../models/trip_model.dart';
 import '../main.dart';
+import 'package:intl/intl.dart';
 
 class HomeFeedView extends StatefulWidget {
   const HomeFeedView({super.key});
@@ -12,72 +19,40 @@ class HomeFeedView extends StatefulWidget {
 }
 
 class _HomeFeedViewState extends State<HomeFeedView> {
-  // Upcoming Trips List
-  final List<Map<String, dynamic>> _upcomingTrips = [
-    {
-      'title': 'Murree Short Trip',
-      'description': 'A quick weekend getaway with college friends to enjoy the weather.',
-      'locationName': 'Murree, Punjab',
-      'dateRange': '25 May - 28 May 2026',
-      'imageUrl': 'https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?w=500',
-      'latitude': 33.9070,
-      'longitude': 73.3943,
-      'weatherTemp': '16°C',
-      'weatherCondition': 'Rainy',
-      'weatherHumidity': '80%',
-      'weatherWind': '15 km/h',
-    },
-    {
-      'title': 'Hunza Valley Exploration',
-      'description': 'Exploring Altit and Baltit forts, Attabad lake, and Passu Cones.',
-      'locationName': 'Hunza, Gilgit-Baltistan',
-      'dateRange': '10 June - 18 June 2026',
-      'imageUrl': 'https://images.unsplash.com/photo-1624555130581-1d9cca783bc0?w=500',
-      'latitude': 36.3167,
-      'longitude': 74.6500,
-      'weatherTemp': '12°C',
-      'weatherCondition': 'Cloudy',
-      'weatherHumidity': '45%',
-      'weatherWind': '8 km/h',
-    }
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Data is now initialized in HomeScreen to avoid conflicts
+  }
 
-  // Past Trips Section List
-  final List<Map<String, dynamic>> _pastTrips = [
-    {
-      'title': 'Skardu Adventure',
-      'description': 'Beautiful cold desert and Shangrila resort memories.',
-      'locationName': 'Skardu, Baltistan',
-      'dateRange': '12 Aug - 18 Aug 2025',
-      'imageUrl': 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?w=500',
-      'latitude': 35.2981,
-      'longitude': 75.6333,
-      'weatherTemp': '22°C',
-      'weatherCondition': 'Sunny',
-      'weatherHumidity': '40%',
-      'weatherWind': '10 km/h',
-    }
-  ];
-
-  void _navigateToCreateTrip() async {
-    final newTrip = await Navigator.push(
+  void _navigateToCreateTrip() {
+    Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CreateTripScreen()),
     );
+  }
 
-    if (newTrip != null && newTrip is Map<String, dynamic>) {
-      setState(() {
-        if (newTrip['imageUrl'] == null) {
-          newTrip['imageUrl'] = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=500';
-        }
-        _upcomingTrips.insert(0, newTrip);
-      });
+  // 🗺️ Map location open function
+  Future<void> _openMap(double lat, double lon) async {
+    final String urlString = "https://www.google.com/maps/search/?api=1&query=$lat,$lon";
+    try {
+      if (await canLaunchUrlString(urlString)) {
+        await launchUrlString(urlString, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint("Error launching map: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tripProvider = Provider.of<TripProvider>(context);
+    final trips = tripProvider.trips;
+
+    final now = DateTime.now();
+    final upcomingTrips = trips.where((t) => t.endDate.isAfter(now)).toList();
+    final pastTrips = trips.where((t) => t.endDate.isBefore(now)).toList();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -103,35 +78,47 @@ class _HomeFeedViewState extends State<HomeFeedView> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Section 1: Upcoming Trips ---
-            Text('Upcoming Trips', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-            const SizedBox(height: 12),
-            _upcomingTrips.isEmpty
-                ? const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Text('No upcoming trips planned yet.'))
-                : ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _upcomingTrips.length,
-              itemBuilder: (context, index) => _buildTripCard(context, _upcomingTrips[index], theme),
-            ),
+      body: tripProvider.isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF0D9488)))
+          : RefreshIndicator(
+        onRefresh: () async {
+          final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+          if (userId != null) {
+            Provider.of<TripProvider>(context, listen: false).fetchUserTrips(userId);
+          }
+        },
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- Section 1: Upcoming Trips ---
+              Text('Upcoming Trips', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+              const SizedBox(height: 12),
+              upcomingTrips.isEmpty
+                  ? const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Text('No upcoming trips planned yet.'))
+                  : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: upcomingTrips.length,
+                itemBuilder: (context, index) => _buildTripCard(context, upcomingTrips[index], theme),
+              ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // --- Section 2: Past Trips ---
-            Text('Past Trips', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
-            const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _pastTrips.length,
-              itemBuilder: (context, index) => _buildTripCard(context, _pastTrips[index], theme, isPast: true),
-            ),
-          ],
+              // --- Section 2: Past Trips ---
+              if (pastTrips.isNotEmpty) ...[
+                Text('Past Trips', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                const SizedBox(height: 12),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: pastTrips.length,
+                  itemBuilder: (context, index) => _buildTripCard(context, pastTrips[index], theme, isPast: true),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -143,15 +130,33 @@ class _HomeFeedViewState extends State<HomeFeedView> {
     );
   }
 
-  Widget _buildTripCard(BuildContext context, Map<String, dynamic> trip, ThemeData theme, {bool isPast = false}) {
+  // 📄 TRIP CARD WIDGET WITH WEATHER BUTTON INTEGRATION
+  Widget _buildTripCard(BuildContext context, TripModel trip, ThemeData theme, {bool isPast = false}) {
+    final dateRange = "${DateFormat('dd MMM').format(trip.startDate)} - ${DateFormat('dd MMM yyyy').format(trip.endDate)}";
+
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TripDetailsScreen(trip: trip))),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => TripDetailsScreen(trip: {
+        'id': trip.id,
+        'title': trip.title,
+        'description': trip.description,
+        'destination': trip.destination,
+        'latitude': trip.latitude,
+        'longitude': trip.longitude,
+        'members': trip.members,
+        'startDate': trip.startDate,
+        'endDate': trip.endDate,
+        'createdBy': trip.createdBy,
+        'imageUrl': trip.imageUrl,
+      }))),
       child: Container(
         margin: const EdgeInsets.only(bottom: 20),
         height: 180,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          image: DecorationImage(image: NetworkImage(trip['imageUrl']), fit: BoxFit.cover),
+          image: DecorationImage(
+              image: NetworkImage(trip.imageUrl ?? 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=500'),
+              fit: BoxFit.cover
+          ),
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -172,34 +177,75 @@ class _HomeFeedViewState extends State<HomeFeedView> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(10)),
-                    child: Text(trip['dateRange'] ?? 'Dates', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                    child: Text(dateRange, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isPast ? Colors.grey.withValues(alpha: 0.6) : const Color(0xFF0D9488),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
+
+                  // ☀️ WEATHER ICON: Navigates to Weather Tab in Details
+                  if (!isPast)
+                    Row(
                       children: [
-                        Icon(_getWeatherIcon(trip['weatherCondition'] ?? ''), size: 14, color: Colors.white),
-                        const SizedBox(width: 6),
-                        Text(trip['weatherTemp'] ?? 'N/A', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Container(
+                          height: 36,
+                          width: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.wb_sunny_rounded, color: Colors.amber, size: 20),
+                            onPressed: () {
+                              String formattedDate = "${trip.startDate.year}-${trip.startDate.month.toString().padLeft(2, '0')}-${trip.startDate.day.toString().padLeft(2, '0')}";
+                              Provider.of<TripProvider>(context, listen: false).fetchWeatherForTripDay(
+                                  trip.latitude,
+                                  trip.longitude,
+                                  formattedDate
+                              );
+
+                              Navigator.push(context, MaterialPageRoute(builder: (context) => TripDetailsScreen(trip: {
+                                'id': trip.id,
+                                'title': trip.title,
+                                'description': trip.description,
+                                'destination': trip.destination,
+                                'latitude': trip.latitude,
+                                'longitude': trip.longitude,
+                                'members': trip.members,
+                                'startDate': trip.startDate,
+                                'endDate': trip.endDate,
+                                'createdBy': trip.createdBy,
+                                'imageUrl': trip.imageUrl,
+                              })));
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // 🗺️ MAP ICON: Opens external map
+                        Container(
+                          height: 36,
+                          width: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.map_rounded, color: Color(0xFF0D9488), size: 20),
+                            onPressed: () => _openMap(trip.latitude, trip.longitude),
+                          ),
+                        ),
                       ],
                     ),
-                  ),
                 ],
               ),
               const Spacer(),
-              Text(trip['title'] ?? '', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-              const SizedBox(height: 4),
-              Text(trip['description'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
+              Text(trip.title.isNotEmpty ? trip.title : trip.destination,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
               const SizedBox(height: 10),
               Row(
                 children: [
                   const Icon(Icons.location_on_rounded, size: 16, color: Color(0xFF0D9488)),
                   const SizedBox(width: 4),
-                  Expanded(child: Text(trip['locationName'] ?? '', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.9)))),
+                  Expanded(child: Text(trip.destination, style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.9)))),
                 ],
               ),
             ],
@@ -207,11 +253,5 @@ class _HomeFeedViewState extends State<HomeFeedView> {
         ),
       ),
     );
-  }
-
-  IconData _getWeatherIcon(String condition) {
-    if (condition.toLowerCase() == 'rainy') return Icons.umbrella_rounded;
-    if (condition.toLowerCase() == 'cloudy') return Icons.cloud_rounded;
-    return Icons.wb_sunny_rounded;
   }
 }

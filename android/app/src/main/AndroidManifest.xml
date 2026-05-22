@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
     <application
         android:label="safar_sync"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <meta-data android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyB6wXBd_0LYj19kyPbD8KQ8Fb3cTKWwZoE"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

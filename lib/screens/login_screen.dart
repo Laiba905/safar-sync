@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:safar_sync/providers/auth_provider.dart';
 import '../widgets/custom_text_field.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
@@ -22,14 +24,24 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Processing Login...')),
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
+      bool success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
-      );
+
+      if (success && mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login Failed. Please check your credentials.')),
+        );
+      }
     }
   }
 
@@ -87,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 32),
@@ -166,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             Text(
                               "Don't have an account? ",
-                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                             ),
                             GestureDetector(
                               onTap: () {

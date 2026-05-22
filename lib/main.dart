@@ -1,14 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'firebase_options.dart';
+import 'providers/auth_provider.dart';
+import 'providers/trip_provider.dart';
+import 'providers/network_provider.dart';
 import 'package:safar_sync/screens/splash_screen.dart';
-import 'screens/home_screen.dart';
 
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark); // Default Dark set kiya h jaisa screenshots me h
+// UI State Management (Member 1 ki logic - intact)
+final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.dark);
 final ValueNotifier<String> profileImageNotifier = ValueNotifier('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200');
 final ValueNotifier<String> profileNameNotifier = ValueNotifier('Ayesha Khan');
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  
+  // Firebase Initialize (Member 2 Task)
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(
+    // Providers Register (Member 2 Task)
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => TripProvider()),
+        ChangeNotifierProvider(create: (_) => NetworkProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

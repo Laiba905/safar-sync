@@ -113,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             Text(
               'ayesha.cs@gmail.com',
-              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
             ),
             const SizedBox(height: 32),
 
@@ -147,7 +147,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -162,7 +162,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -176,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.withOpacity(0.1),
+                  backgroundColor: Colors.red.withValues(alpha: 0.1),
                   foregroundColor: Colors.red,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),

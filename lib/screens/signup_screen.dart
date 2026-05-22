@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/custom_text_field.dart';
+import '../providers/auth_provider.dart';
 import 'home_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -23,14 +25,32 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _handleSignup() {
+  void _handleSignup() async {
     if (_formKey.currentState!.validate()) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Creating Account...')),
       );
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+
+      bool success = await authProvider.signUp(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
       );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account Created Successfully!')),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Signup Failed! Please check your internet or Firebase console.')),
+        );
+      }
     }
   }
 
@@ -97,7 +117,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 24),
@@ -177,7 +197,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           children: [
                             Text(
                               "Already have an account? ",
-                              style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
                             ),
                             GestureDetector(
                               onTap: () {

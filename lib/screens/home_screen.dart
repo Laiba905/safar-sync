@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
-import 'home_feed_view.dart';
-import 'friends_view.dart';
-import 'chats_view.dart';
-import 'safar_ai_view.dart';
+import 'package:provider/provider.dart';
+
+// ✅ Fixed Imports using absolute package paths
+import 'package:safar_sync/providers/auth_provider.dart';
+import 'package:safar_sync/providers/trip_provider.dart';
+import 'package:safar_sync/providers/network_provider.dart';
+import 'package:safar_sync/screens/home_feed_view.dart';
+import 'package:safar_sync/screens/friends_view.dart';
+import 'package:safar_sync/screens/chats_view.dart';
+import 'package:safar_sync/screens/safar_ai_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,6 +19,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
+
+  void _initializeData() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.uid;
+      if (userId != null) {
+        Provider.of<TripProvider>(context, listen: false).fetchUserTrips(userId);
+        Provider.of<NetworkProvider>(context, listen: false).init(userId);
+      }
+    });
+  }
 
   final List<Widget> _views = [
     const HomeFeedView(),
@@ -37,8 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: const Color(0xFF0D9488),
         unselectedItemColor: theme.colorScheme.onSurface.withOpacity(0.4),
         showUnselectedLabels: true,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
           setState(() {
             _selectedIndex = index;

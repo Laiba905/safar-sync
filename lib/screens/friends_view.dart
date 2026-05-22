@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/network_provider.dart';
+import '../models/user_model.dart';
 
 class FriendsView extends StatefulWidget {
   const FriendsView({super.key});
@@ -8,281 +12,244 @@ class FriendsView extends StatefulWidget {
 }
 
 class _FriendsViewState extends State<FriendsView> {
-  // 1. Existing Friends Data
-  final List<Map<String, String>> _allFriends = [
-    {'name': 'Zain Ahmed', 'status': 'Traveling to Murree', 'avatar': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'},
-    {'name': 'Mahnoor Khan', 'status': 'Coding App Backend', 'avatar': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100'},
-    {'name': 'Hamza Ali', 'status': 'Exploring Skardu', 'avatar': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100'},
-  ];
-
-  // 2. Incoming Friend Requests Data
-  final List<Map<String, String>> _friendRequests = [
-    {'name': 'Sana Bilal', 'mutual': '3 mutual friends', 'avatar': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'},
-    {'name': 'Omar Farooq', 'mutual': '1 mutual friend', 'avatar': 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100'},
-  ];
-
-  // Search Queries
-  String _existingFriendsQuery = '';
   final _globalSearchController = TextEditingController();
-  bool _isSearchingGlobally = false;
-  Map<String, String>? _globalSearchResult;
+  String _existingFriendsQuery = '';
 
-  // Global User Database Simulation (For finding new friends)
-  final List<Map<String, String>> _globalUsersDb = [
-    {'name': 'Bilal Raza', 'username': '@bilalraza', 'avatar': 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100'},
-    {'name': 'Ayesha Siddiqui', 'username': '@ayesha_s', 'avatar': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100'},
-  ];
-
-  // Handle Global Search Trigger
-  void _handleGlobalSearch(String value) {
-    if (value.trim().isEmpty) {
-      setState(() {
-        _isSearchingGlobally = false;
-        _globalSearchResult = null;
-      });
-      return;
-    }
-
-    final result = _globalUsersDb.firstWhere(
-          (user) => user['name']!.toLowerCase().contains(value.toLowerCase()) ||
-          user['username']!.toLowerCase().contains(value.toLowerCase()),
-      orElse: () => {},
-    );
-
-    setState(() {
-      _isSearchingGlobally = true;
-      if (result.isNotEmpty) {
-        _globalSearchResult = result;
-      } else {
-        _globalSearchResult = null;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+      if (userId != null) {
+        Provider.of<NetworkProvider>(context, listen: false).init(userId);
       }
     });
+  }
+
+  void _handleGlobalSearch(String value) {
+    if (value.trim().isNotEmpty) {
+      Provider.of<NetworkProvider>(context, listen: false).searchUsers(value.trim());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final networkProvider = Provider.of<NetworkProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
+    final currentUserId = authProvider.user?.uid;
 
-    // Filter existing friends locally based on search bar input
-    final filteredFriends = _allFriends.where((friend) {
-      return friend['name']!.toLowerCase().contains(_existingFriendsQuery.toLowerCase());
+    final filteredFriends = networkProvider.friends.where((friend) {
+      if (currentUserId != null && friend.id == currentUserId) return false;
+      return friend.name.toLowerCase().contains(_existingFriendsQuery.toLowerCase());
     }).toList();
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Travel Buddies', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+        title: const Text('Travel Network', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.storage_rounded, color: Color(0xFF0D9488)),
+            onPressed: () async {
+              if (currentUserId != null) {
+                await networkProvider.seedDummyData(currentUserId);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Dummy Data Added to Firestore! Refreshing...'))
+                );
+              }
+            },
+            tooltip: 'Seed Dummy Data',
+          )
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ==========================================
-            // 🔎 SEARCH 1: Existing Friends Search Bar
-            // ==========================================
-            TextField(
-              onChanged: (val) {
-                setState(() {
-                  _existingFriendsQuery = val;
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Search from existing friends...',
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF0D9488)),
-                filled: true,
-                fillColor: theme.cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          if (currentUserId != null) {
+            networkProvider.init(currentUserId);
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔎 Search Bar
+              TextField(
+                onChanged: (val) => setState(() => _existingFriendsQuery = val),
+                decoration: InputDecoration(
+                  hintText: 'Search friends...',
+                  prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF0D9488)),
+                  filled: true,
+                  fillColor: theme.cardColor,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                 ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // ==========================================
-            // ➕ SEARCH 2: Add New Friends (Global Search Panel)
-            // ==========================================
-            Text(
-                'Find New Travel Partners',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _globalSearchController,
-              onSubmitted: _handleGlobalSearch,
-              decoration: InputDecoration(
-                hintText: 'Enter name or username (e.g. Bilal)...',
-                prefixIcon: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF0D9488)),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF0D9488)),
-                  onPressed: () => _handleGlobalSearch(_globalSearchController.text),
-                ),
-                filled: true,
-                fillColor: theme.cardColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-            ),
-
-            // Global Search Results UI Area
-            if (_isSearchingGlobally) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0D9488).withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF0D9488).withOpacity(0.2)),
-                ),
-                child: _globalSearchResult != null
-                    ? ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(backgroundImage: NetworkImage(_globalSearchResult!['avatar']!)),
-                  title: Text(_globalSearchResult!['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(_globalSearchResult!['username']!, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5))),
-                  trailing: ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Friend Request Sent to ${_globalSearchResult!['name']!}'))
-                      );
-                      setState(() {
-                        _globalSearchController.clear();
-                        _isSearchingGlobally = false;
-                        _globalSearchResult = null;
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D9488),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('Connect', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ),
-                )
-                    : Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text('No traveler found with that name.', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
-                ),
-              ),
-            ],
-            const SizedBox(height: 28),
-
-            // ==========================================
-            // 📥 SECTION 3: Friend Requests Panel (Accept/Reject)
-            // ==========================================
-            if (_friendRequests.isNotEmpty) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                      'Friend Requests',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: const Color(0xFF0D9488), borderRadius: BorderRadius.circular(10)),
-                    child: Text('${_friendRequests.length}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                  )
-                ],
-              ),
-              const SizedBox(height: 12),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _friendRequests.length,
-                itemBuilder: (context, index) {
-                  final req = _friendRequests[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(14)),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      leading: CircleAvatar(backgroundImage: NetworkImage(req['avatar']!)),
-                      title: Text(req['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      subtitle: Text(req['mutual']!, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.5))),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Accept Button
-                          IconButton(
-                            icon: const Icon(Icons.check_circle_rounded, color: Color(0xFF0D9488), size: 28),
-                            onPressed: () {
-                              setState(() {
-                                _allFriends.add({
-                                  'name': req['name']!,
-                                  'status': 'Just joined your circle',
-                                  'avatar': req['avatar']!,
-                                });
-                                _friendRequests.removeAt(index);
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('${req['name']} added to friends!'))
-                              );
-                            },
-                          ),
-                          // Reject Button
-                          IconButton(
-                            icon: const Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 28),
-                            onPressed: () {
-                              setState(() {
-                                _friendRequests.removeAt(index);
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // ==========================================
-            // 👥 SECTION 4: Friends List View
-            // ==========================================
-            Text(
-                'My Circle (${_allFriends.length})',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)
-            ),
-            const SizedBox(height: 12),
-            filteredFriends.isEmpty
-                ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Text('No friends found matching search.', style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4))),
-              ),
-            )
-                : ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredFriends.length,
-              itemBuilder: (context, index) => Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  leading: CircleAvatar(backgroundImage: NetworkImage(filteredFriends[index]['avatar']!)),
-                  title: Text(filteredFriends[index]['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text(filteredFriends[index]['status']!, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
-                  trailing: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF0D9488), size: 20),
-                  onTap: () {
-                    // Standard action simulation trigger
+              // 📥 SECTION 1: Friend Requests (Instagram Style)
+              if (networkProvider.pendingRequests.isNotEmpty) ...[
+                Text('Friend Requests', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                const SizedBox(height: 12),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: networkProvider.pendingRequests.length,
+                  itemBuilder: (context, index) {
+                    final req = networkProvider.pendingRequests[index];
+                    final user = req.user;
+                    return _buildRequestTile(context, req.requestId, user, currentUserId!, theme, networkProvider);
                   },
                 ),
+                const SizedBox(height: 24),
+              ],
+
+              // ➕ SECTION 2: Find New Friends
+              Text('Find New Travelers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _globalSearchController,
+                onSubmitted: _handleGlobalSearch,
+                decoration: InputDecoration(
+                  hintText: 'Search by email...',
+                  prefixIcon: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF0D9488)),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.send_rounded, color: Color(0xFF0D9488)),
+                    onPressed: () => _handleGlobalSearch(_globalSearchController.text),
+                  ),
+                  filled: true,
+                  fillColor: theme.cardColor,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                ),
               ),
+              
+              // Search Results
+              if (networkProvider.isSearching || networkProvider.searchResults.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(14)),
+                  child: networkProvider.isSearching 
+                    ? const Center(child: Padding(padding: EdgeInsets.all(8.0), child: CircularProgressIndicator()))
+                    : Column(
+                        children: networkProvider.searchResults.map((user) => ListTile(
+                          leading: CircleAvatar(child: Text(user.name[0])),
+                          title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(user.email),
+                          trailing: ElevatedButton(
+                            onPressed: () {
+                              networkProvider.sendRequest(currentUserId!, user.id);
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request sent to ${user.name}')));
+                              _globalSearchController.clear();
+                            },
+                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
+                            child: const Text('Connect', style: TextStyle(color: Colors.white)),
+                          ),
+                        )).toList(),
+                      ),
+                ),
+              ],
+              const SizedBox(height: 24),
+
+              // ✨ SECTION 3: Suggested Friends (Dummy Data)
+              Text('Suggested for you', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+              const SizedBox(height: 12),
+              _buildSuggestedTile(theme, "Arsalan Ahmed", "arsalan@travel.com", "https://i.pravatar.cc/150?u=1"),
+              _buildSuggestedTile(theme, "Fatima Zehra", "fatima@sync.com", "https://i.pravatar.cc/150?u=2"),
+              _buildSuggestedTile(theme, "Hamza Ali", "hamza@safar.com", "https://i.pravatar.cc/150?u=3"),
+              
+              const SizedBox(height: 24),
+
+              // 👥 SECTION 4: My Circle (Friends List)
+              Text('My Circle (${networkProvider.friends.length})', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+              const SizedBox(height: 12),
+              if (filteredFriends.isEmpty)
+                const Center(child: Padding(padding: EdgeInsets.all(20.0), child: Text('No friends yet. Start connecting!')))
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredFriends.length,
+                  itemBuilder: (context, index) {
+                    final friend = filteredFriends[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: ListTile(
+                        leading: CircleAvatar(child: Text(friend.name[0])),
+                        title: Text(friend.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(friend.email),
+                        trailing: const Icon(Icons.chat_bubble_outline, color: Color(0xFF0D9488)),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRequestTile(BuildContext context, String requestId, UserModel user, String currentUserId, ThemeData theme, NetworkProvider provider) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(16), border: Border.all(color: theme.dividerColor)),
+      child: Row(
+        children: [
+          CircleAvatar(radius: 25, child: Text(user.name[0])),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                Text(user.email, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              ],
             ),
-          ],
+          ),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: () => provider.acceptRequest(requestId, currentUserId, user.id),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Accept', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () => provider.declineRequest(requestId),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Text('Delete', style: TextStyle(color: Colors.black)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestedTile(ThemeData theme, String name, String email, String imgUrl) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(14)),
+      child: ListTile(
+        leading: CircleAvatar(backgroundImage: NetworkImage(imgUrl)),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(email),
+        trailing: TextButton(
+          onPressed: () {},
+          child: const Text('Follow', style: TextStyle(color: Color(0xFF0D9488), fontWeight: FontWeight.bold)),
         ),
       ),
     );
